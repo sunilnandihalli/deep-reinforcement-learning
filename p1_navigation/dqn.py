@@ -66,6 +66,7 @@ def create_qfn(input_size=37,
     net.apply(init_weights)
     return net
 
+
 def main(env, state_size, action_size, num_time_steps_per_state):
     qfn_local = create_qfn(
         input_size=state_size,
@@ -82,8 +83,9 @@ def main(env, state_size, action_size, num_time_steps_per_state):
     scores_window = deque(maxlen=100)
     eps = eps_start
     save = 0
-    for i in range(10):
-        save = (save + 1) % 100
+    save_id = 0
+    for i in range(100000):
+        save = (save + 1) % 10
         scores.append(
             episode(env, epsilon_greedy_policy(qfn_local, eps), memory,
                     weights))
@@ -92,12 +94,15 @@ def main(env, state_size, action_size, num_time_steps_per_state):
             indices, samples = sample_data(memory, weights, BATCH_SIZE)
             dq = update_params(qfn_local, qfn_target, optimizer, samples,
                                GAMMA)
-            #print([(e.reward,w) for e,w in zip(samples,list(dq.squeeze().numpy())) if abs(e.reward)>0.1])
+            # print([(e.reward,w) for e,w in zip(samples,list(dq.squeeze().numpy())) if abs(e.reward)>0.1])
             update_weights(weights, indices, dq)
         eps = max(eps_end, eps * eps_decay)
         print('eps : ', eps)
         if save == 0:
-            torch.save(qfn_local.state_dict(), 'checkpoint.pth')
+            save_fname = 'checkpoint%03d.pth' % save_id
+            print('episode %06d saving %s' % (i, save_fname))
+            torch.save(qfn_local.state_dict(), save_fname)
+            save_id = (save_id + 1) % 10
         if i > 100:
             print(i - 100, np.mean(scores_window))
 
@@ -205,7 +210,9 @@ def episode(env, policy, memory, weights):
 if __name__ == '__main__':
     mac_path = "Banana.app"
     linux_path = "Banana_Linux/Banana.x86_64"
+    linux_path = '/home/sunilsn/drlnd/unity/banana/regular/Banana_Linux/Banana.x86_64'
     linux_headless_path = "Banana_Linux_NoVis/Banana.x86_64"
+    linux_headless_path = '/home/sunilsn/drlnd/unity/banana/regular/Banana_Linux_NoVis/Banana.x86_64'
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     env = UnityEnvironment(file_name=linux_headless_path)
     brain_name = env.brain_names[0]
